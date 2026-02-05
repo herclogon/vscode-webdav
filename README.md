@@ -188,10 +188,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [webdav](https://github.com/perry-mitchell/webdav-client) client library
 
-## Author
-
-**Miro Paskov**
-
 ## Links
 
 - [GitHub Repository](https://github.com/kowd/vscode-webdav)

@@ -4,10 +4,10 @@
     "description": "WebDAV file system provider",
     "version": "1.0.7",
     "author": {
-        "name": "Miro Paskov"
+        "name": "Dmitry Golubkov"
     },
     "license": "MIT",
-    "publisher": "kowd",
+    "publisher": "herclogon",
     "engines": {
         "vscode": "^1.85.0"
     },
