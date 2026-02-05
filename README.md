@@ -1,6 +1,6 @@
 # WebDAV Workspace
 
-[![Build and Test](https://github.com/kowd/vscode-webdav/actions/workflows/build.yml/badge.svg)](https://github.com/kowd/vscode-webdav/actions/workflows/build.yml)
+[![Build and Test](https://github.com/herlogon/vscode-webdav/actions/workflows/build.yml/badge.svg)](https://github.com/herlogon/vscode-webdav/actions/workflows/build.yml)
 [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kowd.vscode-webdav)](https://marketplace.visualstudio.com/items?itemName=kowd.vscode-webdav)
 
 A VS Code extension that provides WebDAV file system integration and one-way sync capabilities, allowing you to work with remote WebDAV servers seamlessly.
