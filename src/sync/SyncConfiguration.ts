@@ -98,7 +98,13 @@ export class SyncConfiguration {
     }
 
     public getWebDAVBaseUrl(): string {
-        // Return the full URL including path for WebDAV operations
-        return this.webdavUrl.replace(/^webdav/i, "http");
+        // Return only the base URL (protocol + host) without path
+        // The path will be used separately when uploading files
+        try {
+            const url = new URL(this.webdavUrl.replace(/^webdav/i, "http"));
+            return `${url.protocol}//${url.host}`;
+        } catch {
+            return this.webdavUrl.replace(/^webdav/i, "http");
+        }
     }
 }
