@@ -2,18 +2,18 @@
 import {describe, expect, test} from '@jest/globals';
 import * as vscode from 'vscode';
 
-let parse = jest.fn();
-let registerFSP = jest.fn();
-let registerC = jest.fn();
-let workspaceFolders: {uri:string}[] = [];
-let showInfo = jest.fn();
-let showQuickPick = jest.fn();
-let showInputBox = jest.fn();
-let oc = {
+const parse = jest.fn();
+const registerFSP = jest.fn();
+const registerC = jest.fn();
+const workspaceFolders: {uri:string}[] = [];
+const showInfo = jest.fn();
+const showQuickPick = jest.fn();
+const showInputBox = jest.fn();
+const oc = {
   hide: jest.fn(),
   appendLine: jest.fn()
 };
-let vsc = {
+const vsc = {
   window: {
     createOutputChannel: jest.fn().mockReturnValue(oc),
     showInformationMessage: showInfo,
@@ -33,11 +33,11 @@ let vsc = {
   EventEmitter: jest.fn(),
 };
 
-let m = jest.mock('vscode', () => vsc, {virtual:true});
+const m = jest.mock('vscode', () => vsc, {virtual:true});
 
-let stateUpdate = jest.fn();
-let secretsStore = jest.fn();
-let c = {
+const stateUpdate = jest.fn();
+const secretsStore = jest.fn();
+const c = {
   subscriptions: [],
   globalState: {
     update: stateUpdate
@@ -49,7 +49,7 @@ let c = {
 
 import * as x from './extension';
 
-let y = require('./extension');
+const y = require('./extension');
 
 describe('Helpers', () => {
   test('Validate URI', () => {
@@ -88,7 +88,7 @@ describe('Extrension', () => {
   });
 
   test('activate', async () => {
-    let ec = {subscriptions: []} as unknown as vscode.ExtensionContext;
+    const ec = {subscriptions: []} as unknown as vscode.ExtensionContext;
     await x.activate(ec);
 
     expect(ec.subscriptions).toHaveLength(5);
@@ -121,15 +121,24 @@ describe('Rest Auth Command', () => {
   });
 
   test('Does not show a selector for one folder', async () => {
-    let baseUri = jest.spyOn(x, "toBaseUri");
+    const baseUri = jest.spyOn(x, "toBaseUri");
     baseUri.mockReturnValueOnce("http:key");
+
+    // Temporarily set IS_WINDOWS to false for this test
+    const originalIsWindows = x.IS_WINDOWS;
+    // @ts-ignore
+    x.IS_WINDOWS = false;
 
     workspaceFolders.push({uri:"webdav:a"}, {uri:"http:b"});
     showQuickPick.mockReturnValueOnce(Promise.resolve(undefined));
     
     await x.resetAuth();
 
-    expect(showQuickPick).toBeCalledWith(["None", "Basic", "Digest", "Windows (SSPI)"], {"placeHolder": expect.stringContaining("http:key")});
+    expect(showQuickPick).toBeCalledWith(["None", "Basic", "Digest"], {"placeHolder": expect.stringContaining("http:key")});
+
+    // Restore IS_WINDOWS
+    // @ts-ignore
+    x.IS_WINDOWS = originalIsWindows;
   });
 
   test('workspaceFolders can be undefined', async () => {
@@ -161,7 +170,7 @@ describe('Rest Auth Command', () => {
 
     expect(stateUpdate).toBeCalledWith("https:key", {auth:undefined});
   });
-  for(let auth of ["Basic", "Digest"]) {
+  for(const auth of ["Basic", "Digest"]) {
     test(`${auth} auth saves username and password`, async () => {
       showQuickPick.mockReturnValueOnce(Promise.resolve(auth));
       showInputBox.mockReturnValueOnce(Promise.resolve("U"));
@@ -197,8 +206,16 @@ describe('Rest Auth Command', () => {
 
 
 describe('WebDAVFileSystemProvider', () => {
+  let provider: x.WebDAVFileSystemProvider;
+  
   beforeAll(() => {
+    provider = new x.WebDAVFileSystemProvider();
   });
-  test('Delete', () => {
+
+  test('watch returns disposable', () => {
+    const disposable = provider.watch({} as vscode.Uri, {recursive: false, excludes: []});
+    expect(disposable).toHaveProperty('dispose');
+    expect(typeof disposable.dispose).toBe('function');
+    disposable.dispose(); // Should not throw
   });
 });
