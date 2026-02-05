@@ -114,6 +114,18 @@ export class AutoSyncManager {
     }
 
     /**
+     * Extract the base path from a WebDAV URL
+     */
+    private getBasePathFromUrl(webdavUrl: string): string {
+        try {
+            const url = new URL(webdavUrl.replace(/^webdav/i, 'http'));
+            return url.pathname.replace(/\/$/, '') || '/';
+        } catch {
+            return '/';
+        }
+    }
+
+    /**
      * Create WebDAV client with credentials from config
      */
     private async createClientForConfig(config: SyncConfiguration): Promise<WebDAVClient> {
@@ -313,7 +325,8 @@ export class AutoSyncManager {
         } else {
             // Upload file
             try {
-                await this.fileOps.uploadFile(client, localPath, remotePath);
+                const basePath = this.getBasePathFromUrl(config.webdavUrl);
+                await this.fileOps.uploadFile(client, localPath, remotePath, basePath);
                 const size = await this.fileOps.getFileSize(localPath);
                 this.logger.success(`Uploaded: ${remotePath} (${this.fileOps.formatBytes(size)})`, config.name);
             } catch (error) {
@@ -355,7 +368,8 @@ export class AutoSyncManager {
                     const remotePath = PathUtils.toRemotePath(file, config.localPath, config.webdavUrl);
                     
                     try {
-                        await this.fileOps.uploadFile(client, file, remotePath);
+                        const basePath = this.getBasePathFromUrl(config.webdavUrl);
+                        await this.fileOps.uploadFile(client, file, remotePath, basePath);
                         completed++;
                         
                         if (progress) {

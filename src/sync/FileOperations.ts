@@ -10,11 +10,24 @@ export class FileOperations {
 
     /**
      * Ensure remote directory exists, create if necessary
+     * @param basePath - The base WebDAV path (from config) that already exists
      */
-    public async ensureRemoteDirectory(client: WebDAVClient, remotePath: string): Promise<void> {
+    public async ensureRemoteDirectory(client: WebDAVClient, remotePath: string, basePath: string): Promise<void> {
         const parents = PathUtils.getAllParents(remotePath);
         
+        // Normalize base path for comparison
+        const normalizedBasePath = PathUtils.normalizePath(basePath.replace(/\/$/, ''));
+        
         for (const parent of parents) {
+            const normalizedParent = PathUtils.normalizePath(parent);
+            
+            // Skip if this parent is part of or equal to the base path
+            if (normalizedParent === normalizedBasePath || 
+                normalizedParent.length < normalizedBasePath.length) {
+                this.logger.info(`✓ Skipping base path directory: ${parent}`);
+                continue;
+            }
+            
             try {
                 await client.stat(parent);
                 this.logger.info(`✓ Directory exists: ${parent}`);
@@ -37,17 +50,19 @@ export class FileOperations {
 
     /**
      * Upload a single file to WebDAV
+     * @param basePath - The base WebDAV path from config that already exists
      */
     public async uploadFile(
         client: WebDAVClient,
         localPath: string,
-        remotePath: string
+        remotePath: string,
+        basePath: string
     ): Promise<void> {
         try {
             // Ensure parent directory exists
             const remoteDir = PathUtils.getParentPath(remotePath);
             if (remoteDir !== '/') {
-                await this.ensureRemoteDirectory(client, remotePath);
+                await this.ensureRemoteDirectory(client, remotePath, basePath);
             }
 
             // Read local file
