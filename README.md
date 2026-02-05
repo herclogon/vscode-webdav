@@ -3,7 +3,7 @@
 [![Build and Test](https://github.com/kowd/vscode-webdav/actions/workflows/build.yml/badge.svg)](https://github.com/kowd/vscode-webdav/actions/workflows/build.yml)
 [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kowd.vscode-webdav)](https://marketplace.visualstudio.com/items?itemName=kowd.vscode-webdav)
 
-A VS Code extension that provides WebDAV file system integration and bidirectional sync capabilities, allowing you to work with remote WebDAV servers seamlessly.
+A VS Code extension that provides WebDAV file system integration and one-way sync capabilities, allowing you to work with remote WebDAV servers seamlessly.
 
 ## Features
 
@@ -13,12 +13,12 @@ A VS Code extension that provides WebDAV file system integration and bidirection
 - Full read/write support with native VS Code file operations
 
 ### 🔄 Auto-Sync
-- **Bidirectional sync** between local and remote WebDAV folders
-- **Auto-sync on change** - automatically syncs when files are modified
-- **Manual sync** - trigger sync on demand
+- **One-way sync** from local to remote WebDAV folders
+- **Auto-sync on change** - automatically uploads when local files are modified
+- **Manual sync** - trigger full upload on demand
 - **Multiple sync configurations** - manage multiple sync pairs simultaneously
 - **Sync status tracking** - visual indicators for sync status
-- **Conflict handling** - smart conflict detection and resolution
+- **File filtering** - exclude patterns and hidden file handling
 
 ### 🔐 Authentication Support
 - **Basic Authentication**
@@ -66,7 +66,7 @@ A VS Code extension that provides WebDAV file system integration and bidirection
    - Select local folder
    - Enter WebDAV server URL
    - Configure authentication
-   - Set sync options (auto-sync, interval, etc.)
+   - Set sync options (auto-sync, exclude patterns, hidden files, etc.)
 4. Save the configuration
 
 ### Managing Syncs
@@ -157,8 +157,8 @@ npm run package
 ### Sync Issues
 - Check sync logs via `WebDAV Sync: Show Sync Log`
 - Verify network connectivity to the WebDAV server
-- Ensure proper permissions on both local and remote folders
-- Check for file conflicts or locked files
+- Ensure proper write permissions on the remote WebDAV folder
+- Check for locked files on the WebDAV server
 
 ### SSPI/Kerberos (Windows)
 - Ensure you're on a Windows machine in a domain environment
