@@ -37,9 +37,31 @@ The authentication schemes supported by the extension are:
 * `Digest` - The password for the account is stored securely in the VS Code SecretStorage. This means that the OS-specific credential storage will be used.
 * `Windows (SSPI)` - This authentication uses the [Windows Security Support Provider Interface](https://learn.microsoft.com/en-us/windows/win32/rpc/security-support-provider-interface-sspi-). In practice this means that the authentication is Kerberos (via [SPNEGO](https://en.wikipedia.org/wiki/SPNEGO)). This should work the same way as in browsers like Edge or Chrome. It is only available on Windows.
 
+### Client TLS Certificate Support
+
+The extension supports client TLS certificates for mutual TLS authentication (mTLS). During the authentication setup, you'll be prompted to optionally configure a client certificate.
+
+**Supported certificate formats:**
+* **PKCS#12 / PFX** (`.p12`, `.pfx`) - Single file containing both certificate and private key
+* **PEM** (`.pem`, `.crt`, `.cer`) - Separate certificate and private key files
+
+**Features:**
+* Password/passphrase protected certificates
+* Optional custom CA certificate support
+* Secure storage of certificate passwords using VS Code SecretStorage
+
+**To configure client certificates:**
+1. Run the `Reset WebDAV Authentication ...` command
+2. Select your WebDAV workspace
+3. Choose your authentication method (None, Basic, Digest, or Windows SSPI)
+4. When prompted "Use client TLS certificate?", select "Yes"
+5. Select your certificate file(s)
+6. Enter the certificate password if required
+7. Optionally add a custom CA certificate
+
 ### Changing Passwords or Authentication
 
-If `Basic` or `Digest` authentication is used, you may need to update the password or the account.
+If `Basic` or `Digest` authentication is used, or if you need to update client certificate settings, you may need to update the password, account, or certificate configuration.
 
 If at any time authentication fails with a "Forbidden" error a notification pops up suggesting the authentication settings should be reset.
 
