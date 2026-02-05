@@ -24,6 +24,7 @@ A VS Code extension that provides WebDAV file system integration and one-way syn
 ### 🔐 Authentication Support
 - **Basic Authentication**
 - **Digest Authentication**
+- **Client TLS Certificates** - Support for PEM, CRT, CER, P12, and PFX formats
 - Secure credential storage using VS Code SecretStorage
 
 ### 📁 Sync Management UI
@@ -57,6 +58,7 @@ A VS Code extension that provides WebDAV file system integration and one-way syn
 3. Enter your WebDAV server URL (e.g., `webdav://server.com/path` or `webdavs://server.com/path`)
 4. Provide credentials if required
 5. Select authentication type (Basic or Digest)
+6. Optionally configure client TLS certificate (PEM, CRT, P12, or PFX format)
 
 ### Setting Up Sync
 
@@ -151,6 +153,12 @@ npm run package
 - Use `Remote WebDAV: Reset WebDAV Authentication` to clear cached credentials
 - Verify your WebDAV server URL and credentials
 - Check that your WebDAV server supports the selected authentication method
+
+### TLS Certificate Issues
+- Ensure certificate files are in supported formats (PEM, CRT, CER, P12, or PFX)
+- For PEM format, provide both certificate and private key files
+- Verify certificate password if certificate is encrypted
+- Check that certificate is valid and not expired
 
 ### Sync Issues
 - Check sync logs via `WebDAV Sync: Show Sync Log`
