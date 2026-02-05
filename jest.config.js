@@ -7,8 +7,8 @@ module.exports = {
 
   coverageDirectory: "coverage",
   coveragePathIgnorePatterns: [
-    "\\\\node_modules\\\\",
-    "\\\\out\\\\",
+    "/node_modules/",
+    "/out/",
   ],
   coverageProvider: "v8",
   coverageReporters: [
