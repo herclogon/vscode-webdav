@@ -72,9 +72,8 @@ A VS Code extension that provides WebDAV file system integration and one-way syn
 
 - **Sync Now**: Click the sync icon next to a configuration
 - **Pause/Resume**: Control auto-sync behavior
-- **Edit Configuration**: Update sync settings
+- **Edit Configuration**: Opens settings JSON to update sync settings
 - **View Logs**: Check sync history and troubleshoot issues
-- **Change Credentials**: Update authentication details
 - **Remove Sync**: Delete a sync configuration
 
 ## Configuration
@@ -98,10 +97,9 @@ Configure the extension through VS Code settings:
 | `WebDAV Sync: Sync Now` | Manually trigger sync |
 | `WebDAV Sync: Pause Sync` | Pause auto-sync |
 | `WebDAV Sync: Resume Sync` | Resume auto-sync |
-| `WebDAV Sync: Edit Configuration` | Edit sync settings |
+| `WebDAV Sync: Edit Configuration` | Opens settings JSON to edit sync settings |
 | `WebDAV Sync: Remove Sync` | Delete sync configuration |
 | `WebDAV Sync: Show Sync Log` | View sync logs |
-| `WebDAV Sync: Change Credentials` | Update authentication |
 
 ## Requirements
 

@@ -178,6 +178,16 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(syncManager);
 
+    // Listen for workspace configuration changes
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(async (e) => {
+            if (e.affectsConfiguration('webdav.autoSync')) {
+                log('WebDAV Sync configuration changed, reloading...');
+                await syncManager.reloadConfigurations();
+            }
+        })
+    );
+
     // Register tree view
     treeDataProvider = new SyncTreeDataProvider(syncManager);
     context.subscriptions.push(
@@ -283,26 +293,6 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.remote.webdav.showSyncLog', () => {
             syncLogger.show();
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('extension.remote.webdav.changeCredentials', async (item?: SyncConfigItem) => {
-            if (item) {
-                const baseUri = item.config.getBaseUri();
-                await configureAuthForUri(baseUri);
-                vscode.window.showInformationMessage(`Credentials updated for ${item.config.name}`);
-            }
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('extension.remote.webdav.copyConfig', async (item?: SyncConfigItem) => {
-            if (item) {
-                const configJson = JSON.stringify(item.config.toJSON(), null, 2);
-                await vscode.env.clipboard.writeText(configJson);
-                vscode.window.showInformationMessage(`Configuration copied to clipboard: ${item.config.name}`);
-            }
         })
     );
 

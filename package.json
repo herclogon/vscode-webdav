@@ -94,18 +94,6 @@
                 "category": "WebDAV Sync"
             },
             {
-                "command": "extension.remote.webdav.changeCredentials",
-                "title": "Change Credentials",
-                "category": "WebDAV Sync",
-                "icon": "$(key)"
-            },
-            {
-                "command": "extension.remote.webdav.copyConfig",
-                "title": "Copy Configuration",
-                "category": "WebDAV Sync",
-                "icon": "$(copy)"
-            },
-            {
                 "command": "extension.remote.webdav.refreshSyncView",
                 "title": "Refresh",
                 "category": "WebDAV Sync",
@@ -163,16 +151,6 @@
                     "group": "3_log@1"
                 },
                 {
-                    "command": "extension.remote.webdav.changeCredentials",
-                    "when": "view == webdav-sync-list && viewItem == syncConfig",
-                    "group": "3_log@2"
-                },
-                {
-                    "command": "extension.remote.webdav.copyConfig",
-                    "when": "view == webdav-sync-list && viewItem == syncConfig",
-                    "group": "4_utils@1"
-                },
-                {
                     "command": "extension.remote.webdav.editPath",
                     "when": "view == webdav-sync-list && viewItem == syncDetail-local-editable",
                     "group": "inline@1"
@@ -190,11 +168,13 @@
                 "webdav.autoSync.enabled": {
                     "type": "boolean",
                     "default": true,
+                    "scope": "resource",
                     "description": "Enable auto-sync functionality"
                 },
                 "webdav.autoSync.configurations": {
                     "type": "array",
                     "default": [],
+                    "scope": "resource",
                     "description": "List of sync configurations"
                 }
             }

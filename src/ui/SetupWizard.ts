@@ -34,38 +34,17 @@ export class SetupWizard {
             // Step 3: Configure authentication
             const baseUri = this.getBaseUri(webdavUrl);
             await this.configureAuth(baseUri);
-            
-            // Get credentials for this config
-            const username = await vscode.window.showInputBox({
-                prompt: 'Username (for this sync config)',
-                placeHolder: 'Enter username'
-            });
-            const password = await vscode.window.showInputBox({
-                prompt: 'Password (for this sync config)',
-                password: true,
-                placeHolder: 'Enter password'
-            });
 
-            // Get WebDAV client
-            let client: WebDAVClient;
+            // Get WebDAV client to verify connection
             try {
-                client = await this.getWebDAVClient(baseUri);
+                await this.getWebDAVClient(webdavUrl);
             } catch (error) {
                 vscode.window.showErrorMessage(`Failed to connect to WebDAV server: ${error}`);
                 return;
             }
 
-            // Step 4: Browse and select remote folder
-            const remotePath = await this.selectRemoteFolder(client);
-            if (!remotePath) {
-                return;
-            }
-
-            // Combine server URL and remote path into full webdavUrl
-            const fullWebdavUrl = this.combineUrlAndPath(webdavUrl, remotePath);
-
-            // Step 5: Configure sync options
-            const options = await this.configureSyncOptions(localPath, fullWebdavUrl);
+            // Step 4: Configure sync options
+            const options = await this.configureSyncOptions(localPath, webdavUrl);
             if (!options) {
                 return;
             }
@@ -75,15 +54,13 @@ export class SetupWizard {
                 id: this.generateId(),
                 name: options.name,
                 localPath: localPath,
-                webdavUrl: fullWebdavUrl,
+                webdavUrl: webdavUrl,
                 enabled: true,
                 syncOnSave: options.syncOnSave,
                 syncOnDelete: options.syncOnDelete,
                 syncHidden: options.syncHidden,
                 debounceMs: options.debounceMs,
-                excludePatterns: options.excludePatterns,
-                username: username,
-                password: password
+                excludePatterns: options.excludePatterns
             };
 
             await this.syncManager.addConfiguration(config);
@@ -142,22 +119,7 @@ export class SetupWizard {
         });
     }
 
-    private async selectRemoteFolder(client: WebDAVClient): Promise<string | undefined> {
-        const choice = await vscode.window.showQuickPick(
-            ['Browse folders', 'Enter path manually'],
-            { placeHolder: 'How would you like to select the remote folder?' }
-        );
 
-        if (!choice) {
-            return undefined;
-        }
-
-        if (choice === 'Browse folders') {
-            return this.webdavBrowser.browseFolder(client, '/');
-        } else {
-            return this.webdavBrowser.inputPath('/');
-        }
-    }
 
     private async configureSyncOptions(localPath: string, webdavUrl: string): Promise<{
         name: string;
@@ -244,20 +206,7 @@ export class SetupWizard {
         }
     }
 
-    private combineUrlAndPath(baseUrl: string, remotePath: string): string {
-        try {
-            const url = new URL(baseUrl);
-            // Ensure remotePath starts with / and combine with existing path
-            const normalizedRemotePath = remotePath.startsWith('/') ? remotePath : '/' + remotePath;
-            url.pathname = url.pathname.replace(/\/$/, '') + normalizedRemotePath;
-            return url.toString();
-        } catch {
-            // Fallback: simple concatenation
-            const normalizedBase = baseUrl.replace(/\/$/, '');
-            const normalizedRemote = remotePath.startsWith('/') ? remotePath : '/' + remotePath;
-            return normalizedBase + normalizedRemote;
-        }
-    }
+
 
     private generateId(): string {
         return `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -274,180 +223,18 @@ export class SetupWizard {
         }
 
         try {
-            // Ask what to edit
-            const editChoice = await vscode.window.showQuickPick([
-                { label: 'Edit Settings', description: 'Name and sync options', value: 'basic' },
-                { label: 'Change Local Path', description: 'Select different local folder', value: 'local' },
-                { label: 'Change WebDAV URL', description: 'Different server URL and path', value: 'server' },
-                { label: 'Update Credentials', description: 'Update authentication', value: 'auth' },
-                { label: 'Open Settings JSON', description: 'Edit configuration directly in settings file', value: 'json' }
-            ], {
-                placeHolder: `Edit configuration: ${config.name}`
-            });
-
-            if (!editChoice) {
-                return;
-            }
-
-            if (editChoice.value === 'basic') {
-                await this.editBasicSettings(config);
-            } else if (editChoice.value === 'local') {
-                await this.editLocalPath(config);
-            } else if (editChoice.value === 'server') {
-                await this.editWebDAVServer(config);
-            } else if (editChoice.value === 'auth') {
-                await this.editAuthentication(config);
-            } else if (editChoice.value === 'json') {
-                await this.openSettingsJSON();
-            }
-
+            await this.openSettingsJSON();
         } catch (error) {
             this.logger.error(`Edit configuration failed: ${error}`);
             vscode.window.showErrorMessage(`Failed to edit configuration: ${error}`);
         }
     }
 
-    private async editBasicSettings(config: any): Promise<void> {
-        // Edit name
-        const name = await vscode.window.showInputBox({
-            prompt: 'Enter a name for this sync',
-            value: config.name,
-            placeHolder: 'My Sync',
-            validateInput: (value) => {
-                if (!value || value.trim() === '') {
-                    return 'Name cannot be empty';
-                }
-                return undefined;
-            }
-        });
 
-        if (!name) {
-            return;
-        }
 
-        // Sync on save
-        const syncOnSave = await vscode.window.showQuickPick(['Yes', 'No'], {
-            placeHolder: 'Auto-sync files when saved?'
-        }) === 'Yes';
 
-        // Sync on delete
-        const syncOnDelete = await vscode.window.showQuickPick(['Yes', 'No'], {
-            placeHolder: 'Delete remote files when local files are deleted?'
-        }) === 'Yes';
 
-        // Sync hidden files
-        const syncHidden = await vscode.window.showQuickPick(['No', 'Yes'], {
-            placeHolder: 'Sync hidden files (files starting with .)?'
-        }) === 'Yes';
 
-        // Debounce delay
-        const debounceInput = await vscode.window.showInputBox({
-            prompt: 'Debounce delay in milliseconds',
-            value: config.debounceMs.toString(),
-            placeHolder: '500',
-            validateInput: (value) => {
-                const num = parseInt(value);
-                if (isNaN(num) || num < 0) {
-                    return 'Must be a positive number';
-                }
-                return undefined;
-            }
-        });
-
-        const debounceMs = debounceInput ? parseInt(debounceInput) : config.debounceMs;
-
-        // Update configuration
-        await this.syncManager.updateConfiguration(config.id, {
-            name,
-            syncOnSave,
-            syncOnDelete,
-            syncHidden,
-            debounceMs
-        });
-
-        vscode.window.showInformationMessage(`Updated configuration: ${name}`);
-    }
-
-    private async editLocalPath(config: any): Promise<void> {
-        const localPath = await this.selectLocalFolder();
-        if (!localPath) {
-            return;
-        }
-
-        await this.syncManager.updateConfiguration(config.id, { localPath });
-
-        const syncNow = await vscode.window.showQuickPick(['Yes', 'No'], {
-            placeHolder: 'Sync all files from new local path now?'
-        }) === 'Yes';
-
-        if (syncNow) {
-            await this.syncManager.syncNow(config.id, true);
-        }
-
-        vscode.window.showInformationMessage(`Updated local path for: ${config.name}`);
-    }
-
-    private async editWebDAVServer(config: any): Promise<void> {
-        const warning = await vscode.window.showWarningMessage(
-            'Changing the WebDAV URL will require re-authentication. Continue?',
-            { modal: true },
-            'Continue',
-            'Cancel'
-        );
-
-        if (warning !== 'Continue') {
-            return;
-        }
-
-        const webdavUrl = await this.inputWebDAVUrl();
-        if (!webdavUrl) {
-            return;
-        }
-
-        // Configure authentication for new server
-        const baseUri = this.getBaseUri(webdavUrl);
-        await this.configureAuth(baseUri);
-
-        // Get WebDAV client
-        let client: WebDAVClient;
-        try {
-            client = await this.getWebDAVClient(baseUri);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to connect to WebDAV server: ${error}`);
-            return;
-        }
-
-        // Browse and select remote folder on new server
-        const remotePath = await this.selectRemoteFolder(client);
-        if (!remotePath) {
-            return;
-        }
-
-        // Combine server URL and remote path into full webdavUrl
-        const fullWebdavUrl = this.combineUrlAndPath(webdavUrl, remotePath);
-
-        await this.syncManager.updateConfiguration(config.id, {
-            webdavUrl: fullWebdavUrl
-        });
-
-        const syncNow = await vscode.window.showQuickPick(['Yes', 'No'], {
-            placeHolder: 'Sync all files to new URL now?'
-        }) === 'Yes';
-
-        if (syncNow) {
-            await this.syncManager.syncNow(config.id, true);
-        }
-
-        vscode.window.showInformationMessage(`Updated WebDAV URL for: ${config.name}`);
-    }
-
-    private async editAuthentication(config: any): Promise<void> {
-        const baseUri = this.getBaseUri(config.webdavUrl);
-        
-        await this.configureAuth(baseUri);
-        
-        vscode.window.showInformationMessage('Authentication updated. Sync will use new credentials.');
-    }
 
     /**
      * Open the workspace settings JSON file

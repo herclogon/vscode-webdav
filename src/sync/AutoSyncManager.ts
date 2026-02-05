@@ -431,7 +431,65 @@ export class AutoSyncManager {
     public getConfiguration(id: string): SyncConfiguration | undefined {
         return this.configurations.get(id);
     }
-
+    /**
+     * Reload configurations from workspace settings
+     * Called when settings are changed externally
+     */
+    public async reloadConfigurations(): Promise<void> {
+        this.logger.info('Reloading configurations from workspace settings...');
+        
+        const config = vscode.workspace.getConfiguration('webdav.autoSync');
+        const configs = config.get<SyncConfigurationData[]>('configurations', []);
+        
+        // Get current config IDs
+        const currentIds = new Set(this.configurations.keys());
+        const newIds = new Set(configs.map(c => c.id));
+        
+        // Remove configurations that no longer exist
+        for (const id of currentIds) {
+            if (!newIds.has(id)) {
+                await this.stopSync(id);
+                this.configurations.delete(id);
+                this.logger.info(`Removed deleted configuration: ${id}`);
+            }
+        }
+        
+        // Add or update configurations
+        for (const data of configs) {
+            const existing = this.configurations.get(data.id);
+            
+            if (existing) {
+                // Update existing configuration
+                const enabledChanged = existing.enabled !== data.enabled;
+                
+                Object.assign(existing, data);
+                
+                // Handle enabled/disabled state changes
+                if (enabledChanged) {
+                    if (data.enabled) {
+                        await this.startSync(data.id);
+                    } else {
+                        await this.stopSync(data.id);
+                    }
+                }
+                
+                this.logger.info(`Updated configuration: ${data.name}`);
+            } else {
+                // Add new configuration
+                const syncConfig = new SyncConfiguration(data);
+                this.configurations.set(syncConfig.id, syncConfig);
+                
+                if (syncConfig.enabled) {
+                    await this.startSync(syncConfig.id);
+                }
+                
+                this.logger.info(`Added new configuration: ${syncConfig.name}`);
+            }
+        }
+        
+        this._onDidChangeConfiguration.fire();
+        this.logger.info(`Reloaded ${configs.length} sync configurations`);
+    }
     /**
      * Dispose all resources
      */
