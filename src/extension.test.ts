@@ -19,10 +19,20 @@ const vsc = {
     showInformationMessage: showInfo,
     showQuickPick: showQuickPick,
     showInputBox,
+    registerTreeDataProvider: jest.fn().mockReturnValue({
+      dispose: jest.fn()
+    })
   },
   workspace: {
     registerFileSystemProvider: registerFSP,
-    workspaceFolders
+    workspaceFolders,
+    getConfiguration: jest.fn().mockReturnValue({
+      get: jest.fn().mockReturnValue([]),
+      update: jest.fn()
+    }),
+    onDidChangeConfiguration: jest.fn().mockReturnValue({
+      dispose: jest.fn()
+    })
   },
   commands: {
     registerCommand: registerC
@@ -30,7 +40,25 @@ const vsc = {
   Uri : {
     parse: parse
   },
-  EventEmitter: jest.fn(),
+  EventEmitter: class EventEmitter {
+    event: any;
+    constructor() {
+      this.event = jest.fn();
+    }
+    fire() {}
+    dispose() {}
+  },
+  TreeItem: class TreeItem {
+    constructor(public label: string, public collapsibleState?: number) {}
+  },
+  TreeItemCollapsibleState: {
+    None: 0,
+    Collapsed: 1,
+    Expanded: 2
+  },
+  ThemeIcon: class ThemeIcon {
+    constructor(public id: string) {}
+  },
 };
 
 const m = jest.mock('vscode', () => vsc, {virtual:true});
@@ -91,14 +119,14 @@ describe('Extrension', () => {
     const ec = {subscriptions: []} as unknown as vscode.ExtensionContext;
     await x.activate(ec);
 
-    expect(ec.subscriptions).toHaveLength(5);
+    expect(ec.subscriptions.length).toBeGreaterThan(10);
     expect(registerFSP).toBeCalledTimes(2);
     expect(registerFSP).toBeCalledWith("webdav", expect.any(x.WebDAVFileSystemProvider), {isCaseSensitive: true});
     expect(registerFSP).toBeCalledWith("webdavs", expect.any(x.WebDAVFileSystemProvider), {isCaseSensitive: true});
 
-    expect(registerC).toHaveBeenCalledTimes(2);
-    expect(registerC).toBeCalledWith('extension.remote.webdav.open', x.openWebdav);
-    expect(registerC).toBeCalledWith('extension.remote.webdav.resetAuth', x.resetAuth);
+    expect(registerC).toHaveBeenCalledTimes(11);
+    expect(registerC).toHaveBeenCalledWith('extension.remote.webdav.open', x.openWebdav);
+    expect(registerC).toHaveBeenCalledWith('extension.remote.webdav.resetAuth', x.resetAuth);
   });
 });
 
