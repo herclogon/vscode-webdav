@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { FileStat, WebDAVClient, WebDAVClientOptions, WebDAVClientError, AuthType, createClient } from 'webdav';
 import { parse } from 'date-fns';
 import * as axios from 'axios';
+import * as fs from 'fs';
+import * as https from 'https';
 
 const log = (message: string): void => outputChannel.appendLine(message);
 let outputChannel: vscode.OutputChannel;
@@ -195,6 +197,10 @@ export type WebDAVAuthType = "None" | "Basic" | "Digest" | "Windows (SSPI)";
 export interface AuthSettings {
     auth?: WebDAVAuthType,
     user?: string,
+    useCertificate?: boolean,
+    certPath?: string,
+    keyPath?: string,
+    caPath?: string,
 }
 
 export let secrets: vscode.SecretStorage;
@@ -220,6 +226,76 @@ export async function configureAuthForUri(uriKey: string): Promise<void> {
         const pass = await vscode.window.showInputBox({ prompt: "Password", password: true, placeHolder: `Password for ${settings.user}` }) || "";
         await secrets.store(uriKey, pass);
     }
+
+    // Ask if user wants to use client certificate
+    const useCert = await vscode.window.showQuickPick(["No", "Yes"], { 
+        placeHolder: "Use client TLS certificate?" 
+    });
+    
+    if (useCert === "Yes") {
+        settings.useCertificate = true;
+        
+        // Get certificate file path
+        const certFiles = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: { 'Certificate Files': ['pem', 'crt', 'cer', 'p12', 'pfx'] },
+            title: 'Select Client Certificate'
+        });
+        
+        if (certFiles && certFiles[0]) {
+            settings.certPath = certFiles[0].fsPath;
+            
+            // Check if it's a PKCS#12 file (p12/pfx)
+            const isPKCS12 = settings.certPath.match(/\.(p12|pfx)$/i);
+            
+            if (!isPKCS12) {
+                // For PEM format, also get the private key file
+                const keyFiles = await vscode.window.showOpenDialog({
+                    canSelectFiles: true,
+                    canSelectFolders: false,
+                    canSelectMany: false,
+                    filters: { 'Key Files': ['pem', 'key'] },
+                    title: 'Select Private Key'
+                });
+                
+                if (keyFiles && keyFiles[0]) {
+                    settings.keyPath = keyFiles[0].fsPath;
+                }
+            }
+            
+            // Ask for certificate password
+            const certPass = await vscode.window.showInputBox({ 
+                prompt: "Certificate Password (leave empty if none)", 
+                password: true, 
+                placeHolder: "Enter certificate password" 
+            });
+            if (certPass) {
+                await secrets.store(`${uriKey}:cert`, certPass);
+            }
+            
+            // Optionally ask for CA certificate
+            const addCA = await vscode.window.showQuickPick(["No", "Yes"], { 
+                placeHolder: "Add custom CA certificate?" 
+            });
+            
+            if (addCA === "Yes") {
+                const caFiles = await vscode.window.showOpenDialog({
+                    canSelectFiles: true,
+                    canSelectFolders: false,
+                    canSelectMany: false,
+                    filters: { 'CA Certificate': ['pem', 'crt', 'cer'] },
+                    title: 'Select CA Certificate'
+                });
+                
+                if (caFiles && caFiles[0]) {
+                    settings.caPath = caFiles[0].fsPath;
+                }
+            }
+        }
+    }
+
     await state.update(uriKey, settings);
 }
 
@@ -277,6 +353,57 @@ export class WebDAVFileSystemProvider implements vscode.FileSystemProvider {
                 withCredentials: true // This is a signal to use SSPI
             };
         }
+        
+        // Configure client TLS certificate
+        if (settings.useCertificate && settings.certPath) {
+            try {
+                const httpsAgent: any = {};
+                const certPassword = await secrets.get(`${baseUri}:cert`);
+                
+                // Check if it's a PKCS#12 file
+                const isPKCS12 = settings.certPath.match(/\.(p12|pfx)$/i);
+                
+                if (isPKCS12) {
+                    // Load PKCS#12 certificate (contains both cert and key)
+                    const pfx = fs.readFileSync(settings.certPath);
+                    httpsAgent.pfx = pfx;
+                    if (certPassword) {
+                        httpsAgent.passphrase = certPassword;
+                    }
+                    log(`Loaded PKCS#12 certificate from ${settings.certPath}`);
+                } else {
+                    // Load PEM format certificate and key separately
+                    const cert = fs.readFileSync(settings.certPath);
+                    httpsAgent.cert = cert;
+                    
+                    if (settings.keyPath) {
+                        const key = fs.readFileSync(settings.keyPath);
+                        httpsAgent.key = key;
+                        if (certPassword) {
+                            httpsAgent.passphrase = certPassword;
+                        }
+                        log(`Loaded PEM certificate from ${settings.certPath} and key from ${settings.keyPath}`);
+                    } else {
+                        log(`Warning: Certificate loaded but no key file specified`);
+                    }
+                }
+                
+                // Load CA certificate if specified
+                if (settings.caPath) {
+                    const ca = fs.readFileSync(settings.caPath);
+                    httpsAgent.ca = ca;
+                    log(`Loaded CA certificate from ${settings.caPath}`);
+                }
+                
+                // Create the HTTPS agent with certificate configuration
+                options.httpsAgent = new https.Agent(httpsAgent);
+            } catch (error) {
+                log(`Error loading client certificate: ${error}`);
+                vscode.window.showErrorMessage(`Failed to load client certificate: ${error}`);
+                throw error;
+            }
+        }
+        
         return createClient(baseUri, options);
     }
 
@@ -289,8 +416,8 @@ export class WebDAVFileSystemProvider implements vscode.FileSystemProvider {
             }
             return await action(await connections[baseUri]);
         } catch (e) {
-            log(`${e} for ${uri}`);
             const status = (e as WebDAVClientError).status;
+            log(`Error for ${uri}: ${e}, Status: ${status}, Response: ${(e as any).response?.status}`);
             switch (status) {
                 case 401:
                     // Clear the failed connection

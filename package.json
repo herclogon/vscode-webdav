@@ -11,6 +11,12 @@
     "engines": {
         "vscode": "^1.85.0"
     },
+    "activationEvents": [
+        "onFileSystem:webdav",
+        "onFileSystem:webdavs",
+        "onCommand:extension.remote.webdav.open",
+        "onCommand:extension.remote.webdav.resetAuth"
+    ],
     "categories": [
         "Other"
     ],
