@@ -5,8 +5,22 @@ import * as axios from 'axios';
 import * as fs from 'fs';
 import * as https from 'https';
 
+// Import sync components
+import { AutoSyncManager } from './sync/AutoSyncManager';
+import { FileOperations } from './sync/FileOperations';
+import { Logger } from './utils/Logger';
+import { SyncTreeDataProvider } from './ui/SyncTreeDataProvider';
+import { SetupWizard } from './ui/SetupWizard';
+import { WebDAVBrowser } from './ui/WebDAVBrowser';
+import { SyncConfigItem, SyncDetailItem } from './ui/SyncTreeItems';
+
 const log = (message: string): void => outputChannel.appendLine(message);
 let outputChannel: vscode.OutputChannel;
+
+// Sync manager and logger
+let syncManager: AutoSyncManager;
+let syncLogger: Logger;
+let treeDataProvider: SyncTreeDataProvider;
 
 export const IS_WINDOWS = process.platform === "win32";
 let sspiClient: any = undefined;
@@ -168,7 +182,210 @@ export async function activate(context: vscode.ExtensionContext) {
     log(`Register extension.remote.webdav.open command... `);
     context.subscriptions.push(vscode.commands.registerCommand('extension.remote.webdav.open', openWebdav));
 
+    // Initialize sync components
+    log('Initializing WebDAV Sync...');
+    syncLogger = new Logger('WebDAV Sync');
+    context.subscriptions.push(syncLogger);
+
+    const fileOps = new FileOperations(syncLogger);
+    const webdavBrowser = new WebDAVBrowser(syncLogger);
+
+    // Create sync manager with WebDAV client factory
+    syncManager = new AutoSyncManager(
+        context,
+        syncLogger,
+        fileOps,
+        async (webdavUrl: string) => {
+            // Extract base URI for authentication lookup (without path)
+            const baseUri = vscode.Uri.parse(webdavUrl)
+                .with({ path: "", fragment: "", query: "" })
+                .toString();
+            
+            // Create client with full URL but use base URI for auth
+            const fsProvider = new WebDAVFileSystemProvider();
+            
+            // Check if we have a connection for the base URI, if not create one
+            if (!connections[baseUri]) {
+                connections[baseUri] = fsProvider['createClient'](baseUri);
+            }
+            
+            // Get the authenticated client for base URI
+            const baseClient = await connections[baseUri];
+            
+            // If webdavUrl has a path component, create a new client with full URL
+            // but copy the auth settings from the base client
+            const urlObj = new URL(webdavUrl);
+            if (urlObj.pathname && urlObj.pathname !== '/') {
+                // Create client with full URL, reusing base client's auth
+                return fsProvider['createClient'](webdavUrl);
+            }
+            
+            return baseClient;
+        }
+    );
+    context.subscriptions.push(syncManager);
+
+    // Register tree view
+    treeDataProvider = new SyncTreeDataProvider(syncManager);
+    context.subscriptions.push(
+        vscode.window.registerTreeDataProvider('webdav-sync-list', treeDataProvider)
+    );
+
+    // Create setup wizard
+    const setupWizard = new SetupWizard(
+        syncManager,
+        webdavBrowser,
+        syncLogger,
+        async (webdavUrl: string) => {
+            // Extract base URI for authentication
+            const baseUri = vscode.Uri.parse(webdavUrl)
+                .with({ path: "", fragment: "", query: "" })
+                .toString();
+            
+            const fsProvider = new WebDAVFileSystemProvider();
+            
+            // Ensure base connection exists
+            if (!connections[baseUri]) {
+                connections[baseUri] = fsProvider['createClient'](baseUri);
+            }
+            
+            // Get authenticated client
+            await connections[baseUri];
+            
+            // Create client with full URL
+            return fsProvider['createClient'](webdavUrl);
+        },
+        configureAuthForUri
+    );
+
+    // Register sync commands
+    log('Register sync commands...');
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.addSync', async () => {
+            await setupWizard.run();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.syncNow', async (item?: SyncConfigItem) => {
+            try {
+                const configId = item?.config.id;
+                if (configId) {
+                    await syncManager.syncNow(configId, true);
+                } else {
+                    vscode.window.showWarningMessage('No sync configuration selected');
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Sync failed: ${error}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.pauseSync', async (item?: SyncConfigItem) => {
+            const configId = item?.config.id;
+            if (configId) {
+                await syncManager.updateConfiguration(configId, { enabled: false });
+                vscode.window.showInformationMessage(`Paused sync: ${item.config.name}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.resumeSync', async (item?: SyncConfigItem) => {
+            const configId = item?.config.id;
+            if (configId) {
+                await syncManager.updateConfiguration(configId, { enabled: true });
+                vscode.window.showInformationMessage(`Resumed sync: ${item.config.name}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.editSync', async (item?: SyncConfigItem) => {
+            if (item) {
+                await setupWizard.edit(item.config.id);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.removeSync', async (item?: SyncConfigItem) => {
+            const configId = item?.config.id;
+            if (configId) {
+                const confirm = await vscode.window.showWarningMessage(
+                    `Remove sync configuration "${item.config.name}"?`,
+                    { modal: true },
+                    'Remove'
+                );
+                if (confirm === 'Remove') {
+                    await syncManager.removeConfiguration(configId);
+                    vscode.window.showInformationMessage(`Removed sync: ${item.config.name}`);
+                }
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.showSyncLog', () => {
+            syncLogger.show();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.changeCredentials', async (item?: SyncConfigItem) => {
+            if (item) {
+                const baseUri = item.config.getBaseUri();
+                await configureAuthForUri(baseUri);
+                vscode.window.showInformationMessage(`Credentials updated for ${item.config.name}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.copyConfig', async (item?: SyncConfigItem) => {
+            if (item) {
+                const configJson = JSON.stringify(item.config.toJSON(), null, 2);
+                await vscode.env.clipboard.writeText(configJson);
+                vscode.window.showInformationMessage(`Configuration copied to clipboard: ${item.config.name}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.refreshSyncView', () => {
+            treeDataProvider.refresh();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.remote.webdav.editPath', async (item?: SyncDetailItem) => {
+            if (!item || !item.config || !item.type) {
+                return;
+            }
+
+            const isLocal = item.type === 'local';
+            const currentValue = isLocal ? item.config.localPath : item.config.remotePath;
+            const prompt = isLocal ? 'Enter new local path' : 'Enter new remote path';
+
+            const newValue = await vscode.window.showInputBox({
+                prompt: prompt,
+                value: currentValue,
+                placeHolder: currentValue
+            });
+
+            if (newValue && newValue !== currentValue) {
+                await syncManager.updateConfiguration(item.config.id, {
+                    [isLocal ? 'localPath' : 'remotePath']: newValue
+                });
+                vscode.window.showInformationMessage(`Updated ${isLocal ? 'local' : 'remote'} path to: ${newValue}`);
+            }
+        })
+    );
+
     outputChannel.appendLine('Extension has been initialized.');
+    log('WebDAV Sync initialized.');
 }
 
 /**
@@ -336,11 +553,30 @@ export class WebDAVFileSystemProvider implements vscode.FileSystemProvider {
             headers: {
                 'Accept': '*/*',
                 'User-Agent': 'VSCode-WebDAV/1.0'
-            }
+            },
+            maxBodyLength: 500 * 1024 * 1024, // 500MB
+            maxContentLength: 500 * 1024 * 1024 // 500MB
         };
-        const settings = state.get<AuthSettings>(baseUri, {});
+        
+        // Try to get settings from the full URI first, then fall back to base URI
+        let settings = state.get<AuthSettings>(baseUri, {});
+        let authKey = baseUri;
+        
+        // If no settings found and baseUri has a path, try the base URL without path
+        if (!settings.auth && baseUri.includes('://')) {
+            const parsedUri = vscode.Uri.parse(baseUri);
+            if (parsedUri.path && parsedUri.path !== '/') {
+                const baseUrlOnly = parsedUri.with({ path: '', query: '', fragment: '' }).toString();
+                const baseSettings = state.get<AuthSettings>(baseUrlOnly, {});
+                if (baseSettings.auth) {
+                    settings = baseSettings;
+                    authKey = baseUrlOnly;
+                }
+            }
+        }
+        
         if (settings.auth === "Basic" || settings.auth === "Digest") {
-            const password = await secrets.get(baseUri);
+            const password = await secrets.get(authKey);
             options = {
                 ...options,
                 authType: settings.auth === "Basic" ? AuthType.Password : AuthType.Digest,
@@ -358,7 +594,7 @@ export class WebDAVFileSystemProvider implements vscode.FileSystemProvider {
         if (settings.useCertificate && settings.certPath) {
             try {
                 const httpsAgent: any = {};
-                const certPassword = await secrets.get(`${baseUri}:cert`);
+                const certPassword = await secrets.get(`${authKey}:cert`);
                 
                 // Check if it's a PKCS#12 file
                 const isPKCS12 = settings.certPath.match(/\.(p12|pfx)$/i);

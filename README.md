@@ -1,76 +1,204 @@
-[![GitHub](https://img.shields.io/github/license/kowd/vscode-webdav?style=flat-square)](https://github.com/kowd/vscode-webdav/blob/main/LICENSE)
-[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kowd.vscode-webdav?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=kowd.vscode-webdav)
-[![Visual Studio Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/kowd.vscode-webdav?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=kowd.vscode-webdav)
-[![Coverage](https://img.shields.io/coverallsCoverage/github/kowd/vscode-webdav?style=flat-square)](https://coveralls.io/github/kowd/vscode-webdav)
+# WebDAV Workspace
 
-# WebDAV Workspaces for Visual Studio Code
+[![Build and Test](https://github.com/kowd/vscode-webdav/actions/workflows/build.yml/badge.svg)](https://github.com/kowd/vscode-webdav/actions/workflows/build.yml)
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kowd.vscode-webdav)](https://marketplace.visualstudio.com/items?itemName=kowd.vscode-webdav)
 
-The `vscode-webdav` Visual Studio Code extension allows adding WebDAV endpoints as remote workspaces.
+A VS Code extension that provides WebDAV file system integration and bidirectional sync capabilities, allowing you to work with remote WebDAV servers seamlessly.
 
-## How to use
+## Features
 
-Install the extension in VS Code.
+### 🔌 WebDAV FileSystemProvider
+- Mount WebDAV folders as VS Code workspaces
+- Direct file editing on remote WebDAV servers
+- Full read/write support with native VS Code file operations
 
-### Adding a new WebDAV Workspace
+### 🔄 Auto-Sync
+- **Bidirectional sync** between local and remote WebDAV folders
+- **Auto-sync on change** - automatically syncs when files are modified
+- **Manual sync** - trigger sync on demand
+- **Multiple sync configurations** - manage multiple sync pairs simultaneously
+- **Sync status tracking** - visual indicators for sync status
+- **Conflict handling** - smart conflict detection and resolution
 
-There are three ways to open a WebDAV Workspace
+### 🔐 Authentication Support
+- **Basic Authentication**
+- **Digest Authentication**
+- **Windows SSPI (Kerberos)** - Integrated Windows authentication
+- Secure credential storage using VS Code SecretStorage
 
-* When no folder is open in VS Code, activate the explorer and click on the "Open WebDAV"
+### 📁 Sync Management UI
+- Dedicated sync view in the activity bar
+- Easy configuration through setup wizard
+- Visual sync status indicators
+- Quick actions: pause, resume, sync now
+- Sync logs for troubleshooting
 
-* Run the "Open WebDAV Workspace..." command and follow the prompts to enter an address, name and choose authentication.
+## Installation
 
-* Open a `.code-workspace` file which contains a uri with a `webdav` or `webdavs` scheme (corresponding to `http` and `https` WebDAV endpoints respectively). 
-```js
+### From VS Code Marketplace
+1. Open VS Code
+2. Go to Extensions (Ctrl+Shift+X)
+3. Search for "WebDAV Workspace"
+4. Click Install
+
+### From VSIX
+1. Download the latest `.vsix` file from [Releases](https://github.com/kowd/vscode-webdav/releases)
+2. Open VS Code
+3. Go to Extensions (Ctrl+Shift+X)
+4. Click the "..." menu and select "Install from VSIX..."
+5. Select the downloaded `.vsix` file
+
+## Usage
+
+### Opening a WebDAV Workspace
+
+1. Press `Ctrl+Shift+P` to open the command palette
+2. Type "Remote WebDAV: Open WebDAV Workspace..."
+3. Enter your WebDAV server URL (e.g., `webdav://server.com/path` or `webdavs://server.com/path`)
+4. Provide credentials if required
+5. Select authentication type (Basic, Digest, or SSPI)
+
+### Setting Up Sync
+
+1. Click on the WebDAV Sync icon in the activity bar
+2. Click the "+" button to add a new sync configuration
+3. Follow the setup wizard:
+   - Select local folder
+   - Enter WebDAV server URL
+   - Configure authentication
+   - Set sync options (auto-sync, interval, etc.)
+4. Save the configuration
+
+### Managing Syncs
+
+- **Sync Now**: Click the sync icon next to a configuration
+- **Pause/Resume**: Control auto-sync behavior
+- **Edit Configuration**: Update sync settings
+- **View Logs**: Check sync history and troubleshoot issues
+- **Change Credentials**: Update authentication details
+- **Remove Sync**: Delete a sync configuration
+
+## Configuration
+
+Configure the extension through VS Code settings:
+
+```json
 {
-  "folders": [{
-    "name": "live.sysinternals.com",
-    "uri": "webdavs://live.sysinternals.com"
-  }]
+  "webdav.autoSync.enabled": true,
+  "webdav.autoSync.configurations": []
 }
 ```
 
-### Authentication Support
+## Commands
 
-The authentication schemes supported by the extension are:
-* `None` - no authentication.
-* `Basic` - for Basic authentication consider using TLS too. The password for the account is stored securely in the VS Code SecretStorage.
-* `Digest` - The password for the account is stored securely in the VS Code SecretStorage. This means that the OS-specific credential storage will be used.
-* `Windows (SSPI)` - This authentication uses the [Windows Security Support Provider Interface](https://learn.microsoft.com/en-us/windows/win32/rpc/security-support-provider-interface-sspi-). In practice this means that the authentication is Kerberos (via [SPNEGO](https://en.wikipedia.org/wiki/SPNEGO)). This should work the same way as in browsers like Edge or Chrome. It is only available on Windows.
+| Command | Description |
+|---------|-------------|
+| `Remote WebDAV: Open WebDAV Workspace...` | Open a WebDAV folder as a workspace |
+| `Remote WebDAV: Reset WebDAV Authentication...` | Clear stored credentials |
+| `WebDAV Sync: Add Sync Configuration` | Add a new sync configuration |
+| `WebDAV Sync: Sync Now` | Manually trigger sync |
+| `WebDAV Sync: Pause Sync` | Pause auto-sync |
+| `WebDAV Sync: Resume Sync` | Resume auto-sync |
+| `WebDAV Sync: Edit Configuration` | Edit sync settings |
+| `WebDAV Sync: Remove Sync` | Delete sync configuration |
+| `WebDAV Sync: Show Sync Log` | View sync logs |
+| `WebDAV Sync: Change Credentials` | Update authentication |
 
-### Client TLS Certificate Support
+## Requirements
 
-The extension supports client TLS certificates for mutual TLS authentication (mTLS). During the authentication setup, you'll be prompted to optionally configure a client certificate.
+- Visual Studio Code ^1.85.0
+- Node.js (for development)
+- WebDAV server with appropriate access
 
-**Supported certificate formats:**
-* **PKCS#12 / PFX** (`.p12`, `.pfx`) - Single file containing both certificate and private key
-* **PEM** (`.pem`, `.crt`, `.cer`) - Separate certificate and private key files
+## Platform Support
 
-**Features:**
-* Password/passphrase protected certificates
-* Optional custom CA certificate support
-* Secure storage of certificate passwords using VS Code SecretStorage
+- ✅ Windows (with SSPI/Kerberos support)
+- ✅ Linux
+- ✅ macOS
 
-**To configure client certificates:**
-1. Run the `Reset WebDAV Authentication ...` command
-2. Select your WebDAV workspace
-3. Choose your authentication method (None, Basic, Digest, or Windows SSPI)
-4. When prompted "Use client TLS certificate?", select "Yes"
-5. Select your certificate file(s)
-6. Enter the certificate password if required
-7. Optionally add a custom CA certificate
+## Development
 
-### Changing Passwords or Authentication
+### Building from Source
 
-If `Basic` or `Digest` authentication is used, or if you need to update client certificate settings, you may need to update the password, account, or certificate configuration.
+```bash
+# Clone the repository
+git clone https://github.com/kowd/vscode-webdav.git
+cd vscode-webdav
 
-If at any time authentication fails with a "Forbidden" error a notification pops up suggesting the authentication settings should be reset.
+# Install dependencies
+npm install
 
-Additionally you can reset the authentication at any time by using the `Reset WebDAV Authentication ...` command.
+# Build the extension
+npm run build
 
-### Operating System Support
+# Watch mode for development
+npm run watch
+```
 
-The `Windows (SSPI)` authentication scheme is only supported on Windows.
+### Running Tests
 
-## Contributions
+```bash
+npm test
+```
 
-Contributions are welcome.
+### Packaging
+
+```bash
+npm run package
+```
+
+## Troubleshooting
+
+### Authentication Issues
+- Use `Remote WebDAV: Reset WebDAV Authentication` to clear cached credentials
+- Verify your WebDAV server URL and credentials
+- Check that your WebDAV server supports the selected authentication method
+
+### Sync Issues
+- Check sync logs via `WebDAV Sync: Show Sync Log`
+- Verify network connectivity to the WebDAV server
+- Ensure proper permissions on both local and remote folders
+- Check for file conflicts or locked files
+
+### SSPI/Kerberos (Windows)
+- Ensure you're on a Windows machine in a domain environment
+- Verify your Kerberos configuration
+- The extension uses the `node-expose-sspi` module for SSPI support
+
+## Known Issues
+
+Please check the [GitHub Issues](https://github.com/kowd/vscode-webdav/issues) page for known issues and feature requests.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Built with [webdav](https://github.com/perry-mitchell/webdav-client) client library
+- Uses [node-expose-sspi](https://github.com/jlguenego/node-expose-sspi) for Windows SSPI support
+
+## Author
+
+**Miro Paskov**
+
+## Links
+
+- [GitHub Repository](https://github.com/kowd/vscode-webdav)
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kowd.vscode-webdav)
+- [Report Issues](https://github.com/kowd/vscode-webdav/issues)
+- [Changelog](CHANGELOG.md)
+
+---
+
+Made with ❤️ for the VS Code community
