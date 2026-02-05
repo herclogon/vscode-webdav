@@ -200,10 +200,10 @@
     "badges": [],
     "repository": {
         "type": "git",
-        "url": "https://github.com/kowd/vscode-webdav"
+        "url": "https://github.com/herclogon/vscode-webdav"
     },
     "bugs": {
-        "url": "https://github.com/kowd/vscode-webdav/issues"
+        "url": "https://github.com/herclogon/vscode-webdav/issues"
     },
     "readmeFilename": "README.md",
     "devDependencies": {

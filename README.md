@@ -1,8 +1,8 @@
 # WebDAV Workspace
 
 [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/kowd.vscode-webdav)](https://marketplace.visualstudio.com/items?itemName=kowd.vscode-webdav)
-[![Build Status](https://github.com/kowd/vscode-webdav/workflows/CI/badge.svg)](https://github.com/kowd/vscode-webdav/actions)
-[![Tests](https://github.com/kowd/vscode-webdav/workflows/Tests/badge.svg)](https://github.com/kowd/vscode-webdav/actions)
+[![Build and Test](https://github.com/herclogon/vscode-webdav/workflows/Build%20and%20Test/badge.svg)](https://github.com/herclogon/vscode-webdav/actions)
+[![Coverage Status](https://coveralls.io/repos/github/herclogon/vscode-webdav/badge.svg?branch=main)](https://coveralls.io/github/herclogon/vscode-webdav?branch=main)
 
 A VS Code extension that provides WebDAV file system integration and one-way sync capabilities, allowing you to work with remote WebDAV servers seamlessly.
 
@@ -42,7 +42,7 @@ A VS Code extension that provides WebDAV file system integration and one-way syn
 4. Click Install
 
 ### From VSIX
-1. Download the latest `.vsix` file from [Releases](https://github.com/kowd/vscode-webdav/releases)
+1. Download the latest `.vsix` file from [Releases](https://github.com/herclogon/vscode-webdav/releases)
 2. Open VS Code
 3. Go to Extensions (Ctrl+Shift+X)
 4. Click the "..." menu and select "Install from VSIX..."
