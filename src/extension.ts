@@ -11,40 +11,44 @@ let sspiClient: any = undefined;
 let sspiAdapter: (config: axios.AxiosRequestConfig) => Promise<axios.AxiosResponse>;
 
 if (IS_WINDOWS) {
-    const sspi = require('node-expose-sspi');
+    try {
+        const sspi = require('node-expose-sspi');
 
-    sspiAdapter = async (config: axios.AxiosRequestConfig): Promise<axios.AxiosResponse> => {
-        if (sspiClient === undefined) {
-            sspiClient = new sspi.sso.Client();
-        }
-        let url = new URL(config.url?.toString() || "", config.baseURL).toString();
-        let response = await sspiClient.fetch(url, {
-            agent: config.httpAgent,
-            body: config.data,
-            method: config.method,
-            redirect: 'follow',
-        });
+        sspiAdapter = async (config: axios.AxiosRequestConfig): Promise<axios.AxiosResponse> => {
+            if (sspiClient === undefined) {
+                sspiClient = new sspi.sso.Client();
+            }
+            let url = new URL(config.url?.toString() || "", config.baseURL).toString();
+            let response = await sspiClient.fetch(url, {
+                agent: config.httpAgent,
+                body: config.data,
+                method: config.method,
+                redirect: 'follow',
+            });
 
-        let headers: Record<string, string> = {};
-        for (let entry of response.headers.entries()) {
-            headers[entry[0]] = entry[1];
-        }
+            let headers: Record<string, string> = {};
+            for (let entry of response.headers.entries()) {
+                headers[entry[0]] = entry[1];
+            }
 
-        let data: any = undefined;
-        if (config.responseType === "text") {
-            data = response.text();
-        } else {
-            data = response.buffer();
-        }
+            let data: any = undefined;
+            if (config.responseType === "text") {
+                data = response.text();
+            } else {
+                data = response.buffer();
+            }
 
-        return {
-            config: config,
-            status: response.status,
-            statusText: response.statusText,
-            data: data,
-            headers: headers,
+            return {
+                config: config,
+                status: response.status,
+                statusText: response.statusText,
+                data: data,
+                headers: headers,
+            };
         };
-    };
+    } catch (e) {
+        console.warn('node-expose-sspi not available (Windows only)');
+    }
 }
 
 axios.default.interceptors.request.use(async (config) => {
