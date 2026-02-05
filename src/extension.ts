@@ -55,6 +55,11 @@ axios.default.interceptors.request.use(async (config) => {
     if (config.withCredentials) {
         config.adapter = sspiAdapter;
     }
+    // Force Accept header to prevent 406 errors
+    if (!config.headers) {
+        config.headers = {};
+    }
+    config.headers['Accept'] = '*/*';
     return config;
 }, (error) => {
     return Promise.reject(error);
@@ -210,17 +215,27 @@ export class WebDAVFileSystemProvider implements vscode.FileSystemProvider {
     }
 
     private async createClient(baseUri: string): Promise<WebDAVClient> {
-        let options: WebDAVClientOptions = {};
+        let options: WebDAVClientOptions = {
+            // Add permissive headers to avoid 406 Not Acceptable errors
+            headers: {
+                'Accept': '*/*',
+                'User-Agent': 'VSCode-WebDAV/1.0'
+            }
+        };
         let settings = state.get<AuthSettings>(baseUri, {});
         if (settings.auth === "Basic" || settings.auth === "Digest") {
             let password = await secrets.get(baseUri);
             options = {
+                ...options,
                 authType: settings.auth === "Basic" ? AuthType.Password : AuthType.Digest,
                 username: settings.user,
                 password: password
             };
         } else if (settings.auth === "Windows (SSPI)") {
-            options = { withCredentials: true }; // This is a signal to use SSPI
+            options = { 
+                ...options,
+                withCredentials: true // This is a signal to use SSPI
+            };
         }
         return createClient(baseUri, options);
     }
@@ -235,17 +250,32 @@ export class WebDAVFileSystemProvider implements vscode.FileSystemProvider {
             return await action(await connections[baseUri]);
         } catch (e) {
             log(`${e} for ${uri}`);
-            switch ((e as WebDAVClientError).status) {
+            const status = (e as WebDAVClientError).status;
+            switch (status) {
                 case 401:
-                    let message = await vscode.window.showWarningMessage(`Authentication failed for ${uri.authority}.`, "Authenticate");
+                    // Clear the failed connection
+                    delete connections[baseUri];
+                    let message = await vscode.window.showWarningMessage(`Authentication failed for ${uri.authority}.`, "Authenticate", "Cancel");
                     if (message === "Authenticate") {
                         await configureAuthForUri(baseUri);
+                        // Retry the operation with new credentials
+                        try {
+                            connections[baseUri] = this.createClient(baseUri);
+                            return await action(await connections[baseUri]);
+                        } catch (retryError) {
+                            log(`Retry failed: ${retryError} for ${uri}`);
+                            throw vscode.FileSystemError.NoPermissions(uri);
+                        }
                     }
                     throw vscode.FileSystemError.NoPermissions(uri);
                 case 403:
                     throw vscode.FileSystemError.NoPermissions(uri);
                 case 404:
                     throw vscode.FileSystemError.FileNotFound(uri);
+                case 406:
+                    // Not Acceptable - server cannot produce content in requested format
+                    log(`Server returned 406 Not Acceptable for ${uri} - content negotiation failed`);
+                    throw vscode.FileSystemError.Unavailable(uri);
             }
             throw e;
         }
