@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release of the WebDAV FileSystemProvider
-- Support for Basic, Digest, and Windows SSPI (Kerberos) authentication
+- Support for Basic and Digest authentication
 - Secure credential storage using VS Code SecretStorage
 - Mount WebDAV folders as VS Code workspaces
 - Direct file editing on remote WebDAV servers

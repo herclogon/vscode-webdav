@@ -86,7 +86,6 @@ body:
       options:
         - Basic
         - Digest
-        - SSPI (Windows)
         - Not applicable
 
   - type: textarea

@@ -25,5 +25,5 @@ module.exports = {
         'prefer-const': 'warn',
         'no-case-declarations': 'warn'
     },
-    ignorePatterns: ['out', 'dist', '**/*.d.ts', 'coverage', 'jest.config.js', 'src/bundle.js']
+    ignorePatterns: ['out', 'dist', '**/*.d.ts', 'coverage', 'jest.config.js']
 };

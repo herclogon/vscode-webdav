@@ -23,57 +23,10 @@ let syncLogger: Logger;
 let treeDataProvider: SyncTreeDataProvider;
 
 export const IS_WINDOWS = process.platform === "win32";
-let sspiClient: any = undefined;
-let sspiAdapter: (config: axios.AxiosRequestConfig) => Promise<axios.AxiosResponse>;
-
-if (IS_WINDOWS) {
-    try {
-        const sspi = require('node-expose-sspi');
-
-        sspiAdapter = async (config: axios.AxiosRequestConfig): Promise<axios.AxiosResponse> => {
-            if (sspiClient === undefined) {
-                sspiClient = new sspi.sso.Client();
-            }
-            const url = new URL(config.url?.toString() || "", config.baseURL).toString();
-            const response = await sspiClient.fetch(url, {
-                agent: config.httpAgent,
-                body: config.data,
-                method: config.method,
-                redirect: 'follow',
-            });
-
-            const headers: Record<string, string> = {};
-            for (const entry of response.headers.entries()) {
-                headers[entry[0]] = entry[1];
-            }
-
-            let data: any = undefined;
-            if (config.responseType === "text") {
-                data = response.text();
-            } else {
-                data = response.buffer();
-            }
-
-            return {
-                config: config,
-                status: response.status,
-                statusText: response.statusText,
-                data: data,
-                headers: headers,
-            };
-        };
-    } catch (e) {
-        console.warn('node-expose-sspi not available (Windows only)');
-    }
-}
 
 // Configure axios interceptor for WebDAV requests
-// This modifies axios globally but only affects requests with withCredentials=true (SSPI auth)
-// and ensures Accept header is set to prevent 406 errors from strict WebDAV servers
+// Ensures Accept header is set to prevent 406 errors from strict WebDAV servers
 axios.default.interceptors.request.use(async (config) => {
-    if (config.withCredentials) {
-        config.adapter = sspiAdapter;
-    }
     // Force Accept header to prevent 406 errors from WebDAV servers
     if (!config.headers) {
         config.headers = {};
@@ -410,7 +363,7 @@ export const toWebDAVPath = (uri: vscode.Uri): string =>
 export const toBaseUri = (uri: vscode.Uri): string =>
     vscode.Uri.parse(uri.toString().replace(/^webdav/i, "http")).with({ path: "", fragment: "", query: "" }).toString();
 
-export type WebDAVAuthType = "None" | "Basic" | "Digest" | "Windows (SSPI)";
+export type WebDAVAuthType = "None" | "Basic" | "Digest";
 export interface AuthSettings {
     auth?: WebDAVAuthType,
     user?: string,
@@ -431,9 +384,6 @@ export let state: vscode.Memento;
 export async function configureAuthForUri(uriKey: string): Promise<void> {
     delete connections[uriKey]; // The conections are keyed on the baseUri
     const authOptions = ["None", "Basic", "Digest"];
-    if (IS_WINDOWS) {
-        authOptions.push("Windows (SSPI)");
-    }
 
     const settings: AuthSettings = { 
         auth: await vscode.window.showQuickPick(authOptions, { placeHolder: `Choose authentication for ${uriKey}` }) as WebDAVAuthType 
@@ -582,11 +532,6 @@ export class WebDAVFileSystemProvider implements vscode.FileSystemProvider {
                 authType: settings.auth === "Basic" ? AuthType.Password : AuthType.Digest,
                 username: settings.user,
                 password: password
-            };
-        } else if (settings.auth === "Windows (SSPI)") {
-            options = { 
-                ...options,
-                withCredentials: true // This is a signal to use SSPI
             };
         }
         

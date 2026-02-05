@@ -58,7 +58,6 @@ The extension stores WebDAV credentials using VS Code's SecretStorage API, which
 The extension supports multiple authentication methods:
 - **Basic Auth**: Base64 encoded (use only with HTTPS)
 - **Digest Auth**: More secure than Basic, but still use with HTTPS
-- **SSPI/Kerberos** (Windows only): Integrated Windows authentication
 
 ### Best Practices
 

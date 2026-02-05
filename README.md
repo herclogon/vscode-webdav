@@ -23,7 +23,6 @@ A VS Code extension that provides WebDAV file system integration and one-way syn
 ### 🔐 Authentication Support
 - **Basic Authentication**
 - **Digest Authentication**
-- **Windows SSPI (Kerberos)** - Integrated Windows authentication
 - Secure credential storage using VS Code SecretStorage
 
 ### 📁 Sync Management UI
@@ -56,7 +55,7 @@ A VS Code extension that provides WebDAV file system integration and one-way syn
 2. Type "Remote WebDAV: Open WebDAV Workspace..."
 3. Enter your WebDAV server URL (e.g., `webdav://server.com/path` or `webdavs://server.com/path`)
 4. Provide credentials if required
-5. Select authentication type (Basic, Digest, or SSPI)
+5. Select authentication type (Basic or Digest)
 
 ### Setting Up Sync
 
@@ -112,7 +111,7 @@ Configure the extension through VS Code settings:
 
 ## Platform Support
 
-- ✅ Windows (with SSPI/Kerberos support)
+- ✅ Windows
 - ✅ Linux
 - ✅ macOS
 
@@ -160,11 +159,6 @@ npm run package
 - Ensure proper write permissions on the remote WebDAV folder
 - Check for locked files on the WebDAV server
 
-### SSPI/Kerberos (Windows)
-- Ensure you're on a Windows machine in a domain environment
-- Verify your Kerberos configuration
-- The extension uses the `node-expose-sspi` module for SSPI support
-
 ## Known Issues
 
 Please check the [GitHub Issues](https://github.com/kowd/vscode-webdav/issues) page for known issues and feature requests.
@@ -186,7 +180,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Built with [webdav](https://github.com/perry-mitchell/webdav-client) client library
-- Uses [node-expose-sspi](https://github.com/jlguenego/node-expose-sspi) for Windows SSPI support
 
 ## Author
 
