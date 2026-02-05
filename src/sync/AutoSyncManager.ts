@@ -295,7 +295,7 @@ export class AutoSyncManager {
      */
     private async syncFile(config: SyncConfiguration, localPath: string, type: 'create' | 'change' | 'delete'): Promise<void> {
         const client = await this.createClientForConfig(config);
-        const remotePath = PathUtils.toRemotePath(localPath, config.localPath, config.remotePath);
+        const remotePath = PathUtils.toRemotePath(localPath, config.localPath, config.webdavUrl);
 
         this.logger.info(`Syncing: ${localPath} → ${remotePath}`, config.name);
 
@@ -352,7 +352,7 @@ export class AutoSyncManager {
 
                 let completed = 0;
                 for (const file of files) {
-                    const remotePath = PathUtils.toRemotePath(file, config.localPath, config.remotePath);
+                    const remotePath = PathUtils.toRemotePath(file, config.localPath, config.webdavUrl);
                     
                     try {
                         await this.fileOps.uploadFile(client, file, remotePath);

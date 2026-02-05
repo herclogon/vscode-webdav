@@ -41,13 +41,23 @@ export class PathUtils {
     }
 
     /**
-     * Convert local path to WebDAV remote path
+     * Convert local path to WebDAV remote path using full WebDAV URL
      */
-    public static toRemotePath(localPath: string, localBase: string, remoteBase: string): string {
+    public static toRemotePath(localPath: string, localBase: string, webdavUrl: string): string {
         const relativePath = this.getRelativePath(localBase, localPath);
-        const remotePath = this.joinPaths(remoteBase, relativePath);
-        // Ensure it starts with /
-        return remotePath.startsWith('/') ? remotePath : '/' + remotePath;
+        
+        try {
+            const url = new URL(webdavUrl);
+            // Get the base path from URL and append the relative path
+            const basePath = url.pathname;
+            const remotePath = this.joinPaths(basePath, relativePath);
+            // Ensure it starts with /
+            return remotePath.startsWith('/') ? remotePath : '/' + remotePath;
+        } catch {
+            // Fallback: treat webdavUrl as a path
+            const remotePath = this.joinPaths(webdavUrl, relativePath);
+            return remotePath.startsWith('/') ? remotePath : '/' + remotePath;
+        }
     }
 
     /**

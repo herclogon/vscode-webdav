@@ -319,8 +319,8 @@ export async function activate(context: vscode.ExtensionContext) {
             }
 
             const isLocal = item.type === 'local';
-            const currentValue = isLocal ? item.config.localPath : item.config.remotePath;
-            const prompt = isLocal ? 'Enter new local path' : 'Enter new remote path';
+            const currentValue = isLocal ? item.config.localPath : item.config.webdavUrl;
+            const prompt = isLocal ? 'Enter new local path' : 'Enter new WebDAV URL';
 
             const newValue = await vscode.window.showInputBox({
                 prompt: prompt,
@@ -330,7 +330,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
             if (newValue && newValue !== currentValue) {
                 await syncManager.updateConfiguration(item.config.id, {
-                    [isLocal ? 'localPath' : 'remotePath']: newValue
+                    [isLocal ? 'localPath' : 'webdavUrl']: newValue
                 });
                 vscode.window.showInformationMessage(`Updated ${isLocal ? 'local' : 'remote'} path to: ${newValue}`);
             }

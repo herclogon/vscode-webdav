@@ -29,7 +29,7 @@ export class SyncConfigItem extends SyncTreeItem {
         this.tooltip = new vscode.MarkdownString(
             `**${config.name}**\n\n` +
             `Local: \`${config.localPath}\`\n\n` +
-            `Remote: \`${config.webdavUrl}${config.remotePath}\`\n\n` +
+            `Remote: \`${config.webdavUrl}\`\n\n` +
             `Status: ${config.getStatusText()}`
         );
 

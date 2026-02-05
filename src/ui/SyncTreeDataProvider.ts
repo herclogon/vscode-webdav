@@ -43,7 +43,7 @@ export class SyncTreeDataProvider implements vscode.TreeDataProvider<SyncTreeIte
             // Show details under sync
             return [
                 new SyncDetailItem('Local', element.config.localPath, element.config, 'local'),
-                new SyncDetailItem('Remote', `${element.config.webdavUrl}${element.config.remotePath}`, element.config, 'remote'),
+                new SyncDetailItem('Remote', element.config.webdavUrl, element.config, 'remote'),
                 new SyncDetailItem('Status', element.config.getStatusText())
             ];
         }

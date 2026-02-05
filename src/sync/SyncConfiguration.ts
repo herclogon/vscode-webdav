@@ -5,7 +5,6 @@ export interface SyncConfigurationData {
     name: string;
     localPath: string;
     webdavUrl: string;
-    remotePath: string;
     enabled: boolean;
     syncOnSave: boolean;
     syncOnDelete: boolean;
@@ -21,7 +20,6 @@ export class SyncConfiguration {
     public name: string;
     public localPath: string;
     public webdavUrl: string;
-    public remotePath: string;
     public enabled: boolean;
     public syncOnSave: boolean;
     public syncOnDelete: boolean;
@@ -41,7 +39,6 @@ export class SyncConfiguration {
         this.name = data.name;
         this.localPath = data.localPath;
         this.webdavUrl = data.webdavUrl;
-        this.remotePath = data.remotePath;
         this.enabled = data.enabled;
         this.syncOnSave = data.syncOnSave;
         this.syncOnDelete = data.syncOnDelete;
@@ -58,7 +55,6 @@ export class SyncConfiguration {
             name: this.name,
             localPath: this.localPath,
             webdavUrl: this.webdavUrl,
-            remotePath: this.remotePath,
             enabled: this.enabled,
             syncOnSave: this.syncOnSave,
             syncOnDelete: this.syncOnDelete,
